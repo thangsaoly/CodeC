@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'lovepapa987@gmail.com';
+    }
+
+    function isValidSubject(subject) {
+      return subject in ['Theory class', 'Lab', 'Homework', 'Other'];
+    }
+
+    function isValidNewFeedback() {
+      let data = request.resource.data;
+      let allowedKeys = ['words', 'subject', 'sentAt', 'reply', 'done', 'repliedAt', 'name'];
+      let requiredKeys = ['words', 'subject', 'sentAt', 'reply', 'done', 'repliedAt'];
+
+      return data.keys().hasAll(requiredKeys)
+        && data.keys().hasOnly(allowedKeys)
+        && data.words is string
+        && data.words.size() >= 1
+        && data.words.size() <= 500
+        && isValidSubject(data.subject)
+        && data.sentAt == request.time
+        && data.reply == null
+        && data.done == false
+        && data.repliedAt == null
+        && (
+          (!('name' in data)) ||
+          (data.name is string && data.name == request.auth.token.name)
+        );
+    }
+
+    function isValidFeedbackUpdate() {
+      let data = request.resource.data;
+      let existing = resource.data;
+      let allowedKeys = ['words', 'subject', 'sentAt', 'reply', 'done', 'repliedAt', 'name'];
+
+      return data.keys().hasOnly(allowedKeys)
+        && data.words == existing.words
+        && data.subject == existing.subject
+        && data.sentAt == existing.sentAt
+        && (('name' in data) == ('name' in existing))
+        && (!('name' in data) || data.name == existing.name)
+        && data.done is bool
+        && (data.reply == null || data.reply is string)
+        && (data.repliedAt == null || data.repliedAt == request.time || data.repliedAt is timestamp);
+    }
+
+    match /feedback/{feedbackId} {
+      // Anyone can read feedback that has a reply; only the teacher sees waiting feedback
+      allow read: if isOwner() || (resource.data.reply != null && resource.data.reply is string && resource.data.reply.size() > 0);
+
+      // Only signed-in users can send feedback, meeting exact field types, constraints, and Google name
+      allow create: if isSignedIn() && isValidNewFeedback();
+
+      // Only the teacher can reply and mark done
+      allow update: if isOwner() && isValidFeedbackUpdate();
+
+      // Nobody deletes anything
+      allow delete: if false;
+    }
+  }
+}

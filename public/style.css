@@ -1,0 +1,401 @@
+:root {
+  --blue: #2457a7;
+  --blue-dark: #173e7d;
+  --ink: #17243a;
+  --muted: #58677d;
+  --page: #f2f5fa;
+  --line: #d5deeb;
+  --white: #fff;
+  --soft: #eaf0fa;
+  --danger: #a32f35;
+  --good: #176342;
+  --warning-bg: #fff8e6;
+  --warning-line: #ecd599;
+  --warning-text: #7a5000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 18px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+header {
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar {
+  max-width: 1080px;
+  margin: auto;
+  padding: 16px 18px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.brand {
+  color: var(--blue-dark);
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+a.nav-link {
+  color: var(--blue-dark);
+  text-decoration: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+a.nav-link:hover,
+a.nav-link.active {
+  background: var(--soft);
+}
+
+main {
+  width: min(100% - 28px, 760px);
+  margin: 28px auto 60px;
+}
+
+h1 {
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0 0 10px;
+}
+
+h2 {
+  font-size: 23px;
+  line-height: 1.25;
+  margin: 0 0 8px;
+}
+
+p {
+  margin: 8px 0 16px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.card,
+.panel {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 16px 0;
+  box-shadow: 0 3px 10px #173e7d0a;
+}
+
+.feed-card {
+  border-left: 5px solid var(--blue);
+}
+
+.tag {
+  display: inline-block;
+  background: var(--soft);
+  color: var(--blue-dark);
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 15px;
+  font-weight: 750;
+  margin-bottom: 8px;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.reply {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f5f7fb;
+}
+
+.reply strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+label {
+  display: block;
+  font-weight: 750;
+  margin: 18px 0 7px;
+}
+
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+textarea,
+select {
+  width: 100%;
+  border: 1px solid #9aabc1;
+  background: var(--white);
+  color: var(--ink);
+  border-radius: 11px;
+  padding: 13px 14px;
+}
+
+textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+textarea:focus,
+select:focus,
+button:focus-visible,
+a.btn:focus-visible {
+  outline: 3px solid #83a8e5;
+  outline-offset: 2px;
+}
+
+.counter {
+  text-align: right;
+  color: var(--muted);
+  font-size: 16px;
+  margin-top: 3px;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.choice {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.choice input {
+  accent-color: var(--blue);
+  width: 19px;
+  height: 19px;
+}
+
+.choice-help {
+  margin: 5px 0 0;
+  font-size: 16px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  border-radius: 11px;
+  padding: 11px 18px;
+  font-weight: 800;
+  font-size: 18px;
+  text-decoration: none;
+}
+
+.btn-sm {
+  min-height: 38px;
+  padding: 6px 14px;
+  font-size: 15px;
+}
+
+.primary {
+  background: var(--blue);
+  color: #fff;
+}
+
+.primary:hover {
+  background: var(--blue-dark);
+}
+
+.secondary {
+  border: 2px solid var(--blue);
+  color: var(--blue-dark);
+  background: var(--white);
+}
+
+.secondary:hover {
+  background: var(--soft);
+}
+
+.btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.filter-btn {
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--blue-dark);
+  border-radius: 99px;
+  padding: 7px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filter-btn.active,
+.filter-btn:hover {
+  background: var(--soft);
+  border-color: var(--blue);
+}
+
+.notice {
+  border-radius: 12px;
+  background: #edf3ff;
+  border: 1px solid #bbceed;
+  padding: 13px 15px;
+  margin: 14px 0;
+}
+
+.notice.error {
+  background: #fff1f1;
+  border-color: #e9bcbc;
+  color: var(--danger);
+}
+
+.notice.success {
+  background: #eef8f2;
+  border-color: #b9ddc7;
+  color: var(--good);
+}
+
+.notice.warning {
+  background: var(--warning-bg);
+  border-color: var(--warning-line);
+  color: var(--warning-text);
+}
+
+.notice[hidden] {
+  display: none !important;
+}
+
+.screen-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.teacher-card textarea {
+  min-height: 95px;
+}
+
+.status {
+  color: var(--good);
+  font-weight: 750;
+}
+
+.status.done {
+  background: #eef8f2;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 15px;
+}
+
+.status.waiting-badge {
+  background: #fff1e5;
+  color: #9a4700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.status.replied-badge {
+  background: var(--soft);
+  color: var(--blue-dark);
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+  margin-top: 30px;
+}
+
+@media (min-width: 800px) {
+  body {
+    font-size: 19px;
+  }
+  main {
+    margin-top: 38px;
+  }
+  h1 {
+    font-size: 38px;
+  }
+  .card,
+  .panel {
+    padding: 26px;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar {
+    align-items: flex-start;
+  }
+  .nav {
+    width: 100%;
+  }
+  .choices {
+    grid-template-columns: 1fr;
+  }
+  h1 {
+    font-size: 30px;
+  }
+  .card,
+  .panel {
+    padding: 17px;
+  }
+}

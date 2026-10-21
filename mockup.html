@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Class Feedback Box — Design mockup</title>
+  <style>
+    :root { --blue:#2457a7; --blue-dark:#173e7d; --ink:#17243a; --muted:#58677d; --page:#f2f5fa; --line:#d5deeb; --white:#fff; --soft:#eaf0fa; --danger:#a32f35; --good:#176342; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--page); color:var(--ink); font:18px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    header { background:var(--white); border-bottom:1px solid var(--line); }
+    .topbar { max-width:1080px; margin:auto; padding:16px 18px; display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .brand { color:var(--blue-dark); font-weight:800; font-size:21px; letter-spacing:-.02em; }
+    .nav { display:flex; gap:8px; flex-wrap:wrap; }
+    button,select,textarea { font:inherit; }
+    button { border:0; cursor:pointer; }
+    .nav button { color:var(--blue-dark); background:transparent; border-radius:10px; padding:8px 10px; font-size:16px; font-weight:700; }
+    .nav button:hover,.nav button.active { background:var(--soft); }
+    main { width:min(100% - 28px, 760px); margin:28px auto 60px; }
+    h1 { font-size:32px; line-height:1.15; letter-spacing:-.025em; margin:0 0 10px; }
+    h2 { font-size:23px; line-height:1.25; margin:0 0 8px; }
+    p { margin:8px 0 16px; }
+    .muted { color:var(--muted); }
+    .screen { display:none; }
+    .screen.active { display:block; }
+    .card,.panel { background:var(--white); border:1px solid var(--line); border-radius:16px; padding:20px; margin:16px 0; box-shadow:0 3px 10px #173e7d0a; }
+    .feed-card { border-left:5px solid var(--blue); }
+    .tag { display:inline-block; background:var(--soft); color:var(--blue-dark); padding:3px 10px; border-radius:99px; font-size:15px; font-weight:750; margin-bottom:8px; }
+    .meta { color:var(--muted); font-size:16px; }
+    .reply { margin-top:16px; padding:14px; border-radius:12px; background:#f5f7fb; }
+    label { display:block; font-weight:750; margin:18px 0 7px; }
+    textarea,select { width:100%; border:1px solid #9aabc1; background:white; color:var(--ink); border-radius:11px; padding:13px 14px; }
+    textarea { min-height:150px; resize:vertical; }
+    textarea:focus,select:focus,button:focus-visible { outline:3px solid #83a8e5; outline-offset:2px; }
+    .counter { text-align:right; color:var(--muted); font-size:16px; margin-top:3px; }
+    .choices { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .choice { display:flex; gap:10px; align-items:center; border:1px solid var(--line); border-radius:11px; padding:12px; cursor:pointer; font-weight:650; }
+    .choice input { accent-color:var(--blue); width:19px; height:19px; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+    .btn { min-height:50px; border-radius:11px; padding:11px 18px; font-weight:800; font-size:18px; }
+    .primary { background:var(--blue); color:white; }
+    .primary:hover { background:var(--blue-dark); }
+    .secondary { border:2px solid var(--blue); color:var(--blue-dark); background:white; }
+    .btn:disabled { opacity:.48; cursor:not-allowed; }
+    .notice { border-radius:12px; background:#edf3ff; border:1px solid #bbceed; padding:13px 15px; margin:14px 0; }
+    .notice.error { background:#fff1f1; border-color:#e9bcbc; color:var(--danger); }
+    .notice.success { background:#eef8f2; border-color:#b9ddc7; color:var(--good); }
+    .notice[hidden] { display:none; }
+    .screen-title { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+    .teacher-card textarea { min-height:95px; }
+    .status { color:var(--good); font-weight:750; }
+    .status.done { background:#eef8f2; padding:3px 9px; border-radius:99px; font-size:15px; }
+    .choice-help { margin:5px 0 0; font-size:16px; }
+    footer { text-align:center; color:var(--muted); font-size:15px; margin-top:30px; }
+    @media (min-width:800px) { body { font-size:19px; } main { margin-top:38px; } h1 { font-size:38px; } .card,.panel { padding:26px; } }
+    @media (max-width:520px) { .topbar { align-items:flex-start; } .nav { width:100%; } .nav button { padding:7px 9px; } .choices { grid-template-columns:1fr; } h1 { font-size:30px; } .card,.panel { padding:17px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">Class Feedback Box</div>
+      <nav class="nav" aria-label="Mockup screens">
+        <button class="active" data-screen="public">Read feedback</button>
+        <button data-screen="student-login">Student sign in</button>
+        <button data-screen="send">Send feedback</button>
+        <button data-screen="teacher-login">Teacher sign in</button>
+        <button data-screen="waiting">Teacher waiting</button>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <section class="screen active" id="public">
+      <div class="screen-title"><div><h1>Feedback and replies</h1><p class="muted">Read feedback that has a reply.</p></div><button class="btn secondary" data-screen="student-login">Send feedback</button></div>
+      <div class="notice" id="public-state" hidden></div>
+      <div id="public-list">
+        <article class="card feed-card"><span class="tag">Theory class</span><p>Could we have one more example before the quiz?</p><div class="meta">Sent 12 Oct 2026 · Sam</div><div class="reply"><strong>Teacher reply</strong><p>Yes. I’ll add another worked example in our next class.</p><div class="meta">Replied 13 Oct 2026</div></div></article>
+        <article class="card feed-card"><span class="tag">Lab</span><p>The step-by-step instructions helped me understand the exercise.</p><div class="meta">Sent 10 Oct 2026</div><div class="reply"><strong>Teacher reply</strong><p>Thanks for letting me know.</p><div class="meta">Replied 11 Oct 2026</div></div></article>
+      </div>
+      <div class="actions"><button class="btn secondary" onclick="publicState('error')">Show load error</button><button class="btn secondary" onclick="publicState('offline')">Show offline</button><button class="btn secondary" onclick="publicState('empty')">Show empty</button></div>
+    </section>
+
+    <section class="screen" id="student-login">
+      <div class="panel"><h1>Sign in to send feedback</h1><p class="muted">Sign in with Google first. Then you can send feedback about class.</p><div class="notice" id="student-login-state" hidden></div><button class="btn primary" onclick="login('student')">Sign in with Google</button><div class="actions"><button class="btn secondary" onclick="loginState('student-login-state','error')">Show sign-in error</button><button class="btn secondary" onclick="loginState('student-login-state','offline')">Show offline</button></div></div>
+    </section>
+
+    <section class="screen" id="send">
+      <h1>Send feedback</h1><p class="muted">Your feedback helps improve class.</p>
+      <div class="notice" id="send-state" hidden></div>
+      <div class="panel" id="send-signin"><h2>First, sign in with Google</h2><p class="muted">You need to sign in before sending feedback.</p><button class="btn primary" onclick="unlockSend()">Sign in with Google</button></div>
+      <div class="notice success" id="signed-in-state" hidden>Signed in with Google. You can now send feedback.</div>
+      <form id="feedback-form">
+        <fieldset id="send-fields" disabled style="border:0;padding:0;margin:0;min-width:0">
+        <label for="words">Your feedback</label><textarea id="words" maxlength="500" placeholder="Write 1 to 500 characters" required></textarea><div class="counter" id="counter">0 / 500</div>
+        <label for="subject">Subject</label><select id="subject" required><option value="">Choose a subject</option><option>Theory class</option><option>Lab</option><option>Homework</option><option>Other</option></select>
+        <label>How should your name appear?</label><div class="choices"><label class="choice"><input type="radio" name="identity" value="named" checked> Show my name</label><label class="choice"><input type="radio" name="identity" value="anonymous"> Stay anonymous</label></div><p class="choice-help muted">Your name appears only when you choose to show it.</p>
+        <div class="actions"><button type="submit" class="btn primary" id="send-button" disabled>Send</button></div>
+        </fieldset>
+      </form>
+      <div class="actions"><button class="btn secondary" onclick="sendState('error')">Show send error</button><button class="btn secondary" onclick="sendState('offline')">Show offline</button></div>
+    </section>
+
+    <section class="screen" id="teacher-login">
+      <div class="panel"><h1>Teacher sign in</h1><p class="muted">Sign in with Google to see feedback waiting for your reply.</p><div class="notice" id="teacher-login-state" hidden></div><button class="btn primary" onclick="login('teacher')">Sign in with Google</button><div class="actions"><button class="btn secondary" onclick="loginState('teacher-login-state','error')">Show sign-in error</button><button class="btn secondary" onclick="loginState('teacher-login-state','offline')">Show offline</button></div></div>
+    </section>
+
+    <section class="screen" id="waiting">
+      <div class="screen-title"><div><h1>Waiting for your reply</h1><p class="muted">Only the teacher can see these feedback items.</p></div><span class="tag">Teacher view</span></div>
+      <div class="notice" id="waiting-state" hidden></div>
+      <div id="waiting-list">
+        <article class="card teacher-card"><span class="tag">Homework</span><h2>Could we get a sample answer for the homework?</h2><div class="meta">Sent 20 Oct 2026 · Alex</div><label for="reply1">Your reply</label><textarea id="reply1" placeholder="Write a reply"></textarea><div class="actions"><button class="btn primary" onclick="teacherAction('replied')">Reply</button><button class="btn secondary" onclick="teacherAction('done')">Mark done</button></div></article>
+        <article class="card teacher-card"><span class="tag">Other</span><h2>The class examples made the topic easier.</h2><div class="meta">Sent 19 Oct 2026</div><label for="reply2">Your reply</label><textarea id="reply2" placeholder="Write a reply"></textarea><div class="actions"><button class="btn primary" onclick="teacherAction('replied')">Reply</button><button class="btn secondary" onclick="teacherAction('done')">Mark done</button></div></article>
+      </div>
+      <div class="actions"><button class="btn secondary" onclick="waitingState('empty')">Show nothing waiting</button><button class="btn secondary" onclick="waitingState('error')">Show load error</button><button class="btn secondary" onclick="waitingState('offline')">Show offline</button></div>
+    </section>
+    <footer>Responsive design mockup · Use the top buttons to switch screens</footer>
+  </main>
+  <script>
+    const screenButtons = document.querySelectorAll('[data-screen]');
+    function show(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+      document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.screen === id));
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+    screenButtons.forEach(b => b.addEventListener('click', () => show(b.dataset.screen)));
+    const words = document.getElementById('words');
+    const subject = document.getElementById('subject');
+    const sendButton = document.getElementById('send-button');
+    words.addEventListener('input', () => {
+      document.getElementById('counter').textContent = `${words.value.length} / 500`;
+      sendButton.disabled = words.value.length < 1 || words.value.length > 500 || !subject.value;
+    });
+    subject.addEventListener('change', () => { sendButton.disabled = words.value.length < 1 || !subject.value; });
+    document.getElementById('feedback-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const box = document.getElementById('send-state');
+      box.className = 'notice success'; box.textContent = 'Feedback sent.'; box.hidden = false;
+    });
+    function setNotice(id, text, kind='') { const n=document.getElementById(id); n.className='notice '+kind; n.textContent=text; n.hidden=false; }
+    function publicState(kind) {
+      if(kind==='empty') { document.getElementById('public-list').innerHTML='<div class="panel"><h2>No replied feedback yet</h2><p class="muted">Feedback will appear here after it has a reply.</p></div>'; document.getElementById('public-state').hidden=true; }
+      else { document.getElementById('public-list').innerHTML=''; setNotice('public-state',kind==='offline'?'You are offline. Connect to the internet to load replied feedback.':'Replied feedback could not be loaded. Try again.'); }
+    }
+    function login(role) { setNotice(role==='student'?'student-login-state':'teacher-login-state','Google sign-in is shown as a preview in this mockup.','success'); }
+    function unlockSend() { document.getElementById('send-fields').disabled=false; document.getElementById('send-signin').hidden=true; document.getElementById('signed-in-state').hidden=false; }
+    function loginState(id,kind) { setNotice(id,kind==='offline'?'You are offline. Connect to the internet to sign in.':'Sign-in failed. Try again.','error'); }
+    function sendState(kind) { setNotice('send-state',kind==='offline'?'You are offline. Connect to the internet before sending.':'Feedback could not be sent. Your text is still here. Try again.','error'); }
+    function waitingState(kind) {
+      if(kind==='empty') { document.getElementById('waiting-list').innerHTML='<div class="panel"><h2>Nothing waiting for a reply</h2><p class="muted">New feedback waiting for a reply will appear here.</p></div>'; document.getElementById('waiting-state').hidden=true; }
+      else { setNotice('waiting-state',kind==='offline'?'You are offline. Waiting feedback is visible if already loaded. Reply and Done actions need a connection.':'Waiting feedback could not be loaded. Try again.'); }
+    }
+    function teacherAction(action) { setNotice('waiting-state',action==='done'?'Feedback marked done.':'Reply could not be saved in this preview.','success'); }
+  </script>
+</body>
+</html>

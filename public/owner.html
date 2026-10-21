@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Class Feedback Box — Teacher</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <a href="index.html" class="brand">Class Feedback Box</a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="index.html" class="nav-link">Read feedback</a>
+        <a href="owner.html" class="nav-link active">Teacher view</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div id="firebase-not-connected-banner" class="notice warning" hidden>
+      <strong>Note:</strong> Firebase is not connected yet. Paste your configuration into <code>public/firebase-config.js</code> to enable live feedback and sign-in.
+    </div>
+
+    <!-- Teacher Sign-in View (Shown when not authenticated) -->
+    <section id="teacher-login-section">
+      <div class="panel">
+        <h1>Teacher sign in</h1>
+        <p class="muted">Sign in with Google to see feedback waiting for your reply.</p>
+        <div id="login-notice" class="notice" hidden></div>
+        <button type="button" class="btn primary" id="btn-teacher-signin">Sign in with Google</button>
+      </div>
+    </section>
+
+    <!-- Teacher Management View (Shown when authenticated) -->
+    <section id="waiting-section" hidden>
+      <div class="screen-title">
+        <div>
+          <h1>Feedback management</h1>
+          <p class="muted">Review waiting feedback, manage replies, and track completed items.</p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="tag">Teacher view</span>
+          <button type="button" id="btn-teacher-signout" class="btn secondary btn-sm">Sign out</button>
+        </div>
+      </div>
+
+      <!-- Filters for feedback list: All, Waiting, Replied, Done -->
+      <div class="filter-bar" role="tablist" aria-label="Filter feedback">
+        <button type="button" class="filter-btn active" data-filter="all">All feedback</button>
+        <button type="button" class="filter-btn" data-filter="waiting">Waiting</button>
+        <button type="button" class="filter-btn" data-filter="replied">Replied</button>
+        <button type="button" class="filter-btn" data-filter="done">Done</button>
+      </div>
+
+      <div id="waiting-notice" class="notice" hidden></div>
+      <div id="waiting-list"></div>
+    </section>
+
+    <footer>
+      Class Feedback Box · Teacher View
+    </footer>
+  </main>
+
+  <script type="module">
+    import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js';
+
+    const notConnectedBanner = document.getElementById('firebase-not-connected-banner');
+    const loginSection = document.getElementById('teacher-login-section');
+    const waitingSection = document.getElementById('waiting-section');
+    const loginNotice = document.getElementById('login-notice');
+    const waitingNotice = document.getElementById('waiting-notice');
+    const waitingList = document.getElementById('waiting-list');
+    const btnTeacherSignin = document.getElementById('btn-teacher-signin');
+    const btnTeacherSignout = document.getElementById('btn-teacher-signout');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+
+    let currentFilter = 'all';
+    let allItems = [];
+
+    function showNotice(element, message, type = '') {
+      element.className = 'notice ' + type;
+      element.textContent = message;
+      element.hidden = false;
+    }
+
+    function clearNotice(element) {
+      element.hidden = true;
+      element.textContent = '';
+      element.className = 'notice';
+    }
+
+    // Format date strictly as "20 Oct 2026"
+    function formatDate(val) {
+      if (!val) return '';
+      const date = typeof val.toDate === 'function' ? val.toDate() : new Date(val);
+      if (isNaN(date.getTime())) return '';
+      const day = date.getDate();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = monthNames[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day} ${month} ${year}`;
+    }
+
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilterAndRender();
+      });
+    });
+
+    let onReplyHandler = null;
+    let onToggleDoneHandler = null;
+
+    function applyFilterAndRender() {
+      let filtered = allItems;
+      if (currentFilter === 'waiting') {
+        filtered = allItems.filter(item => !item.reply);
+      } else if (currentFilter === 'replied') {
+        filtered = allItems.filter(item => !!item.reply);
+      } else if (currentFilter === 'done') {
+        filtered = allItems.filter(item => item.done === true);
+      }
+      renderList(filtered);
+    }
+
+    function renderList(items) {
+      waitingList.replaceChildren();
+
+      if (!items || items.length === 0) {
+        const emptyPanel = document.createElement('div');
+        emptyPanel.className = 'panel';
+
+        const title = document.createElement('h2');
+        title.textContent = currentFilter === 'waiting' ? 'Nothing waiting for a reply' : 'No feedback found';
+        emptyPanel.appendChild(title);
+
+        const desc = document.createElement('p');
+        desc.className = 'muted';
+        desc.textContent = currentFilter === 'waiting'
+          ? 'New feedback waiting for a reply will appear here.'
+          : 'There is no feedback matching this filter.';
+        emptyPanel.appendChild(desc);
+
+        waitingList.appendChild(emptyPanel);
+        return;
+      }
+
+      items.forEach(item => {
+        const article = document.createElement('article');
+        article.className = 'card teacher-card';
+
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = item.subject || 'Other';
+        article.appendChild(tag);
+
+        if (item.reply) {
+          const repliedBadge = document.createElement('span');
+          repliedBadge.className = 'status replied-badge';
+          repliedBadge.textContent = 'Replied';
+          repliedBadge.style.marginLeft = '8px';
+          article.appendChild(repliedBadge);
+        } else {
+          const waitingBadge = document.createElement('span');
+          waitingBadge.className = 'status waiting-badge';
+          waitingBadge.textContent = 'Waiting';
+          waitingBadge.style.marginLeft = '8px';
+          article.appendChild(waitingBadge);
+        }
+
+        if (item.done) {
+          const doneBadge = document.createElement('span');
+          doneBadge.className = 'status done';
+          doneBadge.textContent = 'Done';
+          doneBadge.style.marginLeft = '8px';
+          article.appendChild(doneBadge);
+        }
+
+        const heading = document.createElement('h2');
+        heading.textContent = item.words;
+        article.appendChild(heading);
+
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'meta';
+        const sentStr = formatDate(item.sentAt);
+        metaDiv.textContent = item.name ? `Sent ${sentStr} · ${item.name}` : `Sent ${sentStr}`;
+        article.appendChild(metaDiv);
+
+        const replyLabel = document.createElement('label');
+        const replyInputId = 'reply-' + item.id;
+        replyLabel.htmlFor = replyInputId;
+        replyLabel.textContent = 'Teacher reply';
+        article.appendChild(replyLabel);
+
+        const textarea = document.createElement('textarea');
+        textarea.id = replyInputId;
+        textarea.placeholder = 'Write a reply';
+        if (item.reply) {
+          textarea.value = item.reply;
+        }
+        article.appendChild(textarea);
+
+        if (item.repliedAt) {
+          const replyMeta = document.createElement('div');
+          replyMeta.className = 'meta';
+          replyMeta.style.marginTop = '6px';
+          replyMeta.textContent = `Replied ${formatDate(item.repliedAt)}`;
+          article.appendChild(replyMeta);
+        }
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'actions';
+
+        const btnReply = document.createElement('button');
+        btnReply.type = 'button';
+        btnReply.className = 'btn primary';
+        btnReply.textContent = item.reply ? 'Update reply' : 'Reply';
+        btnReply.addEventListener('click', () => {
+          if (onReplyHandler) onReplyHandler(item.id, textarea.value);
+        });
+        actionsDiv.appendChild(btnReply);
+
+        const btnDone = document.createElement('button');
+        btnDone.type = 'button';
+        btnDone.className = 'btn secondary';
+        btnDone.textContent = item.done ? 'Mark not done' : 'Mark done';
+        btnDone.addEventListener('click', () => {
+          if (onToggleDoneHandler) onToggleDoneHandler(item.id, !item.done);
+        });
+        actionsDiv.appendChild(btnDone);
+
+        article.appendChild(actionsDiv);
+        waitingList.appendChild(article);
+      });
+    }
+
+    if (!isFirebaseConfigured()) {
+      notConnectedBanner.hidden = false;
+      btnTeacherSignin.disabled = true;
+    } else {
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js');
+      const {
+        getAuth,
+        GoogleAuthProvider,
+        signInWithPopup,
+        signOut,
+        onAuthStateChanged
+      } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js');
+      const {
+        getFirestore,
+        collection,
+        query,
+        doc,
+        updateDoc,
+        onSnapshot,
+        serverTimestamp
+      } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      const feedbackRef = collection(db, 'feedback');
+
+      let unsubscribe = null;
+
+      // Online/Offline detection
+      window.addEventListener('online', () => clearNotice(waitingNotice));
+      window.addEventListener('offline', () => {
+        showNotice(waitingNotice, 'You are offline. Waiting feedback is visible if already loaded. Actions need a connection.', 'error');
+      });
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          loginSection.hidden = true;
+          waitingSection.hidden = false;
+          subscribeFeedback();
+        } else {
+          loginSection.hidden = false;
+          waitingSection.hidden = true;
+          if (unsubscribe) {
+            unsubscribe();
+            unsubscribe = null;
+          }
+        }
+      });
+
+      btnTeacherSignin.addEventListener('click', async () => {
+        clearNotice(loginNotice);
+        if (!navigator.onLine) {
+          showNotice(loginNotice, 'You are offline. Connect to the internet to sign in.', 'error');
+          return;
+        }
+        try {
+          const provider = new GoogleAuthProvider();
+          await signInWithPopup(auth, provider);
+        } catch (err) {
+          showNotice(loginNotice, 'Sign-in failed. Try again.', 'error');
+        }
+      });
+
+      btnTeacherSignout.addEventListener('click', async () => {
+        try {
+          await signOut(auth);
+        } catch (err) {
+          console.error('Sign-out failed', err);
+        }
+      });
+
+      function subscribeFeedback() {
+        if (unsubscribe) unsubscribe();
+
+        // Query all feedback so teacher can view waiting, replied, and done, and change replies
+        const allQuery = query(feedbackRef);
+
+        unsubscribe = onSnapshot(allQuery, (snapshot) => {
+          clearNotice(waitingNotice);
+          allItems = [];
+          snapshot.forEach(docSnap => {
+            allItems.push({ id: docSnap.id, ...docSnap.data() });
+          });
+
+          // Sort descending by sentAt
+          allItems.sort((a, b) => {
+            const timeA = a.sentAt && a.sentAt.toMillis ? a.sentAt.toMillis() : (new Date(a.sentAt || 0)).getTime();
+            const timeB = b.sentAt && b.sentAt.toMillis ? b.sentAt.toMillis() : (new Date(b.sentAt || 0)).getTime();
+            return timeB - timeA;
+          });
+
+          applyFilterAndRender();
+        }, (error) => {
+          // If Firestore refuses access / permission denied:
+          if (error && (error.code === 'permission-denied' || error.message?.includes('permission'))) {
+            showNotice(waitingNotice, 'This teacher area is only available to the owner.', 'error');
+            waitingList.replaceChildren();
+          } else if (!navigator.onLine) {
+            showNotice(waitingNotice, 'You are offline. Waiting feedback is visible if already loaded. Actions need a connection.', 'error');
+          } else {
+            showNotice(waitingNotice, 'This teacher area is only available to the owner.', 'error');
+          }
+        });
+      }
+
+      onReplyHandler = async function handleReply(id, replyText) {
+        clearNotice(waitingNotice);
+        if (!replyText || replyText.trim() === '') {
+          showNotice(waitingNotice, 'Please enter a reply before saving.', 'error');
+          return;
+        }
+        if (!navigator.onLine) {
+          showNotice(waitingNotice, 'You are offline. Connect to the internet before saving a reply.', 'error');
+          return;
+        }
+        try {
+          const itemRef = doc(db, 'feedback', id);
+          await updateDoc(itemRef, {
+            reply: replyText.trim(),
+            repliedAt: serverTimestamp()
+          });
+          showNotice(waitingNotice, 'Reply saved.', 'success');
+        } catch (err) {
+          if (err && (err.code === 'permission-denied' || err.message?.includes('permission'))) {
+            showNotice(waitingNotice, 'This teacher area is only available to the owner.', 'error');
+          } else {
+            showNotice(waitingNotice, 'Reply could not be saved. Try again.', 'error');
+          }
+        }
+      };
+
+      onToggleDoneHandler = async function handleToggleDone(id, newDoneState) {
+        clearNotice(waitingNotice);
+        if (!navigator.onLine) {
+          showNotice(waitingNotice, 'You are offline. Connect to the internet before updating.', 'error');
+          return;
+        }
+        try {
+          const itemRef = doc(db, 'feedback', id);
+          await updateDoc(itemRef, {
+            done: newDoneState
+          });
+          showNotice(waitingNotice, newDoneState ? 'Feedback marked done.' : 'Feedback marked not done.', 'success');
+        } catch (err) {
+          if (err && (err.code === 'permission-denied' || err.message?.includes('permission'))) {
+            showNotice(waitingNotice, 'This teacher area is only available to the owner.', 'error');
+          } else {
+            showNotice(waitingNotice, 'Could not update status. Try again.', 'error');
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>

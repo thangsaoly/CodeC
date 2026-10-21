@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Class Feedback Box</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <a href="index.html" class="brand">Class Feedback Box</a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#replied" class="nav-link active">Read feedback</a>
+        <a href="#send" class="nav-link">Send feedback</a>
+        <a href="owner.html" class="nav-link">Teacher view</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div id="firebase-not-connected-banner" class="notice warning" hidden>
+      <strong>Note:</strong> Firebase is not connected yet. Paste your configuration into <code>public/firebase-config.js</code> to enable live feedback and sign-in.
+    </div>
+
+    <!-- Section: Read Replied Feedback -->
+    <section id="replied" aria-labelledby="heading-replied">
+      <div class="screen-title">
+        <div>
+          <h1 id="heading-replied">Feedback and replies</h1>
+          <p class="muted">Read feedback that has a reply.</p>
+        </div>
+      </div>
+
+      <div id="public-notice" class="notice" hidden></div>
+      <div id="public-list"></div>
+    </section>
+
+    <!-- Section: Send Feedback -->
+    <section id="send" style="margin-top: 48px;" aria-labelledby="heading-send">
+      <h1 id="heading-send">Send feedback</h1>
+      <p class="muted">Your feedback helps improve class.</p>
+
+      <div id="send-notice" class="notice" hidden></div>
+
+      <!-- Post-send confirmation card with link back to feedback -->
+      <div id="post-send-card" class="panel" hidden>
+        <h2>Feedback sent.</h2>
+        <p class="muted">Thank you for your feedback. Once the teacher replies, it will appear in the replied feedback list.</p>
+        <div class="actions">
+          <a href="#replied" class="btn primary">Back to feedback</a>
+          <button type="button" class="btn secondary" id="btn-send-another">Send another feedback</button>
+        </div>
+      </div>
+
+      <!-- Sign in prompt when not signed in -->
+      <div id="signin-prompt" class="panel">
+        <h2>First, sign in with Google</h2>
+        <p class="muted">You need to sign in before sending feedback.</p>
+        <button type="button" class="btn primary" id="btn-google-signin">Sign in with Google</button>
+      </div>
+
+      <!-- Signed-in state notice -->
+      <div id="user-status-bar" class="notice success" hidden>
+        Signed in with Google as <strong id="user-display-name"></strong>.
+        <button type="button" id="btn-signout" class="btn secondary btn-sm" style="margin-left: 10px;">Sign out</button>
+      </div>
+
+      <!-- Feedback Form -->
+      <form id="feedback-form">
+        <fieldset id="form-fieldset" disabled style="border: 0; padding: 0; margin: 0; min-width: 0;">
+          <label for="words">Your feedback</label>
+          <textarea id="words" maxlength="500" placeholder="Write 1 to 500 characters" required></textarea>
+          <div class="counter" id="counter">0 / 500</div>
+
+          <label for="subject">Subject</label>
+          <select id="subject" required>
+            <option value="">Choose a subject</option>
+            <option value="Theory class">Theory class</option>
+            <option value="Lab">Lab</option>
+            <option value="Homework">Homework</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <label>How should your name appear?</label>
+          <div class="choices">
+            <label class="choice">
+              <input type="radio" name="identity" value="named" checked>
+              <span>Show my name</span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="identity" value="anonymous">
+              <span>Stay anonymous</span>
+            </label>
+          </div>
+          <p class="choice-help muted">Your name appears only when you choose to show it.</p>
+
+          <div class="actions">
+            <button type="submit" class="btn primary" id="btn-send" disabled>Send</button>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+
+    <footer>
+      Class Feedback Box
+    </footer>
+  </main>
+
+  <script type="module">
+    import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js';
+
+    const notConnectedBanner = document.getElementById('firebase-not-connected-banner');
+    const publicNotice = document.getElementById('public-notice');
+    const publicList = document.getElementById('public-list');
+    const sendNotice = document.getElementById('send-notice');
+    const postSendCard = document.getElementById('post-send-card');
+    const btnSendAnother = document.getElementById('btn-send-another');
+    const signinPrompt = document.getElementById('signin-prompt');
+    const userStatusBar = document.getElementById('user-status-bar');
+    const userDisplayName = document.getElementById('user-display-name');
+    const btnGoogleSignin = document.getElementById('btn-google-signin');
+    const btnSignout = document.getElementById('btn-signout');
+    const formFieldset = document.getElementById('form-fieldset');
+    const feedbackForm = document.getElementById('feedback-form');
+    const wordsInput = document.getElementById('words');
+    const subjectSelect = document.getElementById('subject');
+    const counterDisplay = document.getElementById('counter');
+    const btnSend = document.getElementById('btn-send');
+
+    const VALID_SUBJECTS = ['Theory class', 'Lab', 'Homework', 'Other'];
+
+    function showNotice(element, message, type = '') {
+      element.className = 'notice ' + type;
+      element.textContent = message;
+      element.hidden = false;
+    }
+
+    function clearNotice(element) {
+      element.hidden = true;
+      element.textContent = '';
+      element.className = 'notice';
+    }
+
+    // Format date strictly as "20 Oct 2026"
+    function formatDate(val) {
+      if (!val) return '';
+      const date = typeof val.toDate === 'function' ? val.toDate() : new Date(val);
+      if (isNaN(date.getTime())) return '';
+      const day = date.getDate();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = monthNames[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day} ${month} ${year}`;
+    }
+
+    function updateCounterAndSendState() {
+      const length = wordsInput.value.length;
+      counterDisplay.textContent = `${length} / 500`;
+      const isWordsValid = length >= 1 && length <= 500;
+      const isSubjectValid = VALID_SUBJECTS.includes(subjectSelect.value);
+      btnSend.disabled = !isWordsValid || !isSubjectValid;
+    }
+
+    wordsInput.addEventListener('input', updateCounterAndSendState);
+    subjectSelect.addEventListener('change', updateCounterAndSendState);
+
+    btnSendAnother.addEventListener('click', () => {
+      postSendCard.hidden = true;
+      feedbackForm.hidden = false;
+      wordsInput.value = '';
+      subjectSelect.value = '';
+      updateCounterAndSendState();
+      wordsInput.focus();
+    });
+
+    function renderFeedbackList(items) {
+      publicList.replaceChildren();
+
+      if (!items || items.length === 0) {
+        const emptyPanel = document.createElement('div');
+        emptyPanel.className = 'panel';
+
+        const title = document.createElement('h2');
+        title.textContent = 'No replied feedback yet';
+        emptyPanel.appendChild(title);
+
+        const desc = document.createElement('p');
+        desc.className = 'muted';
+        desc.textContent = 'Feedback will appear here after it has a reply.';
+        emptyPanel.appendChild(desc);
+
+        publicList.appendChild(emptyPanel);
+        return;
+      }
+
+      items.forEach(item => {
+        const article = document.createElement('article');
+        article.className = 'card feed-card';
+
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = item.subject;
+        article.appendChild(tag);
+
+        const wordsP = document.createElement('p');
+        wordsP.textContent = item.words;
+        article.appendChild(wordsP);
+
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'meta';
+        const sentStr = formatDate(item.sentAt);
+        metaDiv.textContent = item.name ? `Sent ${sentStr} · ${item.name}` : `Sent ${sentStr}`;
+        article.appendChild(metaDiv);
+
+        if (item.reply) {
+          const replyBox = document.createElement('div');
+          replyBox.className = 'reply';
+
+          const replyTitle = document.createElement('strong');
+          replyTitle.textContent = 'Teacher reply';
+          replyBox.appendChild(replyTitle);
+
+          const replyP = document.createElement('p');
+          replyP.textContent = item.reply;
+          replyBox.appendChild(replyP);
+
+          const replyMeta = document.createElement('div');
+          replyMeta.className = 'meta';
+          replyMeta.textContent = `Replied ${formatDate(item.repliedAt)}`;
+          replyBox.appendChild(replyMeta);
+
+          article.appendChild(replyBox);
+        }
+
+        publicList.appendChild(article);
+      });
+    }
+
+    if (!isFirebaseConfigured()) {
+      notConnectedBanner.hidden = false;
+      renderFeedbackList([]);
+    } else {
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js');
+      const {
+        getAuth,
+        GoogleAuthProvider,
+        signInWithPopup,
+        signOut,
+        onAuthStateChanged
+      } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js');
+      const {
+        getFirestore,
+        collection,
+        query,
+        where,
+        onSnapshot,
+        addDoc,
+        serverTimestamp
+      } = await import('https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js');
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      let currentUser = null;
+
+      // Online/Offline network state handling
+      window.addEventListener('online', () => clearNotice(publicNotice));
+      window.addEventListener('offline', () => {
+        showNotice(publicNotice, 'You are offline. Connect to the internet to load replied feedback.', 'error');
+      });
+
+      // Listen for Replied Feedback
+      const feedbackRef = collection(db, 'feedback');
+      const repliedQuery = query(
+        feedbackRef,
+        where('reply', '!=', null)
+      );
+
+      onSnapshot(repliedQuery, (snapshot) => {
+        clearNotice(publicNotice);
+        const items = [];
+        snapshot.forEach(docSnap => {
+          items.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        // Sort descending by sentAt
+        items.sort((a, b) => {
+          const timeA = a.sentAt && a.sentAt.toMillis ? a.sentAt.toMillis() : (new Date(a.sentAt || 0)).getTime();
+          const timeB = b.sentAt && b.sentAt.toMillis ? b.sentAt.toMillis() : (new Date(b.sentAt || 0)).getTime();
+          return timeB - timeA;
+        });
+        renderFeedbackList(items);
+      }, (error) => {
+        if (!navigator.onLine) {
+          showNotice(publicNotice, 'You are offline. Connect to the internet to load replied feedback.', 'error');
+        } else {
+          showNotice(publicNotice, 'Replied feedback could not be loaded. Try again.', 'error');
+        }
+      });
+
+      // Authentication state management
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (user) {
+          signinPrompt.hidden = true;
+          userDisplayName.textContent = user.displayName || 'Student';
+          userStatusBar.hidden = false;
+          formFieldset.disabled = false;
+        } else {
+          signinPrompt.hidden = false;
+          userStatusBar.hidden = true;
+          userDisplayName.textContent = '';
+          formFieldset.disabled = true;
+        }
+        updateCounterAndSendState();
+      });
+
+      // Sign in with Google
+      btnGoogleSignin.addEventListener('click', async () => {
+        clearNotice(sendNotice);
+        if (!navigator.onLine) {
+          showNotice(sendNotice, 'You are offline. Connect to the internet to sign in.', 'error');
+          return;
+        }
+        try {
+          const provider = new GoogleAuthProvider();
+          await signInWithPopup(auth, provider);
+        } catch (err) {
+          showNotice(sendNotice, 'Sign-in failed. Try again.', 'error');
+        }
+      });
+
+      // Sign out
+      btnSignout.addEventListener('click', async () => {
+        try {
+          await signOut(auth);
+        } catch (err) {
+          console.error('Sign-out failed', err);
+        }
+      });
+
+      // Form Submission
+      feedbackForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearNotice(sendNotice);
+
+        if (!currentUser) {
+          showNotice(sendNotice, 'You must be signed in with Google to send feedback.', 'error');
+          return;
+        }
+
+        if (!navigator.onLine) {
+          showNotice(sendNotice, 'You are offline. Connect to the internet before sending.', 'error');
+          return;
+        }
+
+        const words = wordsInput.value;
+        const subject = subjectSelect.value;
+        const identityChoice = feedbackForm.elements['identity'].value;
+
+        // Validation: 1 to 500 characters
+        if (words.length < 1 || words.length > 500) {
+          showNotice(sendNotice, 'Feedback must be between 1 and 500 characters.', 'error');
+          return;
+        }
+
+        // Validation: Subject must be on the allowed list
+        if (!VALID_SUBJECTS.includes(subject)) {
+          showNotice(sendNotice, 'Please choose a valid subject.', 'error');
+          return;
+        }
+
+        btnSend.disabled = true;
+
+        try {
+          // Schema: words, subject, name (only if shown), sentAt, reply, repliedAt, done
+          // NO email and NO userId saved
+          const record = {
+            words: words,
+            subject: subject,
+            sentAt: serverTimestamp(),
+            reply: null,
+            done: false,
+            repliedAt: null
+          };
+
+          if (identityChoice === 'named') {
+            record.name = currentUser.displayName || 'Student';
+          }
+
+          await addDoc(feedbackRef, record);
+
+          // Hide form and show confirmation card with link back to feedback
+          feedbackForm.hidden = true;
+          postSendCard.hidden = false;
+        } catch (err) {
+          showNotice(sendNotice, 'Feedback could not be sent. Your text is still here. Try again.', 'error');
+          updateCounterAndSendState();
+        }
+      });
+    }
+  </script>
+</body>
+</html>
